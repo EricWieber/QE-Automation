@@ -1,0 +1,7 @@
+"#window":{
+	backgroundColor: "white"
+}
+
+"#button":{
+	borderColor: "black"
+}

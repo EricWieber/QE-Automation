@@ -1,0 +1,121 @@
+The below information is also posted here: https://wiki.appcelerator.org/display/qe/QE+Automation+App
+
+- For Alloy tests: ﻿Create a controller and view for your test. (Style is optional)
+- For Classic tests: Create a controller for your test. (use it as your app.js)
+
+- Add the below block to the end of each test's controller:
+/*************************** Automation ***************************/
+var _window = ADDWINDOWHERE;
+var _actions = [
+];
+
+/***** Set the above. Do not modify the below *****/
+var _af = require("automateFunctions");
+_af._setup(_actions, _window, arguments[0] || {});
+/************************* End Automation *************************/
+
+- Set the _window variable in the test's automation block so that the Automator can properly close the test.
+	- ﻿Set it to the main window in your view, if running an Alloy test
+	- Set it to the main window in your controller, if running a Classic test
+
+- Add the testing actions to the '_actions' array:
+This is an array of actions that you want your test to execute.
+Actions array entry syntax: (Duration and timout are always optional and are in seconds or milliseconds)
+	Take a Screenshot:
+		["screenshot"]										//Captures the current screen. Uses takeScreenshot()
+		["screenshot", <object>]							//Captures the specified object. Uses object.toImage()		
+	Call a function:
+		["call", <function>, [<parameters>]]				//Calls the specified function with the listed parameters
+		["call", <function>, [<parameters>], <timeout>]		//Calls the specified function with the listed parameters.
+		EX:
+		["call", check]
+		["call", test, true]
+		["call", init, 4]
+		["call", toggleSetting, [true, 2], 6]
+	Tap on an object:
+		["tap", <object>, <click>, <duration>]				//Taps on an element for the specified duration. Click is a boolean that will fire a click event on the object if 'true'. This will show button presses.
+		EX:
+		["tap", button1, true, 1]
+	Fire an event:
+		[<event>, <object>, {<parameters>}, <duration>]		//Fires event on object with specified parameters. Duration is how long to wait before executing the next action
+		[<method string>, <object>, <duration>]				//Calls method on object. Used for calling sub-methods of objects. Duration is how long to wait before executing the next action
+		EX:
+		["click", tableView, {rowData : tableView.data[0].rows[0]}, 2]
+		["hide", docViewer, 3]
+	Wait for a time:
+		["wait", <time>]									//Wait for the specified time
+		EX:
+		["wait", 3]
+	Relaunch the current test:
+		["relaunch"]										//Relaunches the test. Usefull for checking options that change on load. Toggle them, then relaunch.
+	Background the app*:
+		["background", <pause>, <duration>]					//Backgrounds the app for the specified amount of time. Execution of the test pauses if <pause> is true. *Requires the 'QEA Helper' app installed on the device
+		EX:
+		["background", true, 30]
+	Verify output*:
+		["log", <message>]									//Check if the message was output during the test. *Will only check messages output with the '_log' function during the test [_log(message)].
+		EX:
+		["log", "[INFO] :  Hello there"]
+		
+EXAMPLE:
+	var _actions = [
+		["wait", 2],
+		["screenshot"],
+		["call", check],
+		["click", button, {}, 2]
+	];
+	
+	
+- You can also call functions inside of the test itself to help with basic test needs or to verify output:
+	_log(message);									//Save the message as a log to be validated later
+	_checkLog(message);								//Checks the saved logs for the message and returns true if it was found, false if not found
+	alert(message);									//Call an alert. The alert will be dismissed automatically if not running the test manually
+
+
+- Add an object to the 'tests' array in 'index.js'. The object should have this format:
+		{"name":"TIMOBXXXX", "section": <section>, <exclude/only>: <platforms>}
+	- name: The name of the controller for the test
+	- section: String indicating what section in the list the test will be added to. Visual/Organizational purposes only. (OPTIONAL)
+	- exclude/only: String indicating what platforms/OSs the test is excluded from or will only run on. (OPTIONAL)
+	- platforms: A list of platforms/OSs. (OPTIONAL)
+		- If excluding, this is a string array of platforms that the test will not run on.
+		- If specifying 'only', this is the one platform/OS that the test will run on. Be sure that your test will ONLY run on this platform/OS (including new platforms/OS's added in the future)
+- Only use lower case strings for the 'exclude' and 'only' properties
+
+EXAMPLE:
+	var tests = [
+		{"name":"TIMOB0123", "section":"Alloy", "exclude":"mobileweb"},
+		{"name":"TIMOB1234", "exclude":["android", "ios"]},
+		{"name":"TIMOB5678", "only": "ios"},
+		{"name":"TIMOB9012"},
+	];
+	
+- Add the test's info to the info array in 'app/lib/infoStrings.js': (This is not required for tests, but is highly recommended to do)
+	1. It is best to add the information from the ticket (description, steps to reproduce, expected results, etc)
+	2. The info does not need to be placed in the array in any particular order
+	3. There is a template to use for the info entry at the top of the file
+	
+- To get a test to be labeled as "Passed", "Failed", "Check", or "Skip":
+	1. "Passed": Have a function called in the actions array for the test return the boolean 'true'
+	2. "Failed": Have a function called in the actions array for the test return the boolean 'false'
+	3. "Check": Have no explicit returns from any functions in the actions array
+	4. "Skip": Have a function called in the actions array for the test return the string 'skip'
+
+EXAMPLE:
+The below test will pass for iPhone 6 and 6 Plus that have the correct size, fail if the size is incorrect, and be skipped if the device is not an iPhone 6 or 6 Plus.
+
+	function check() {
+		var model = Ti.Platform.getModel();
+		if ((model == "iPhone7,1" && size == 736) || (model == "iPhone7,2" && size == 667))	
+			return true;
+		else if (model == "iPhone7,1" || model == "iPhone7,2")
+			return false;
+		else
+			return "skip";
+	}
+
+
+- Known issues:
+1. Can only have 1 "relaunch" command in actions array
+2. Cannot see button pushes (UI does not show the click on the button)
+

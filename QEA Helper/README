@@ -1,0 +1,6 @@
+The QEA Helper is used with the QE Automator app.
+
+- QEA will backgorund and open the QEAH
+- After a specified amount of time, QEAH will background and open QEA
+
+This is useful for automated tests that require the app to be backgrounded.

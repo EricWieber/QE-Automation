@@ -1,0 +1,20 @@
+<Alloy>
+	<Window id="indexWindow">
+		<Button id="autoRun" title="Auto Run: False" onClick="autoRun"></Button>
+		<Label id="nextRun"></Label>
+		<Button id="all" title="Run Valid Tests" onClick="runClick" ></Button>
+		<ListView id="view" onItemclick="rowClick" >
+			<Templates>
+                <ItemTemplate name="template" >
+                    <ImageView bindId="image" id="image" onClick="imageClick" />
+                    <Label bindId="title" id="title" />
+                    <Label bindId="subtitle" id="subtitle" />
+                    <Button bindId="info" id="info" backgroundImage="info.png" onClick="infoClick" />
+                    <Button bindId="autorun" id="autorun" backgroundImage="play.png" onClick="playClick" />
+                </ItemTemplate>
+            </Templates>
+            
+            <SearchBar id="search" />
+		</ListView>
+	</Window>
+</Alloy>

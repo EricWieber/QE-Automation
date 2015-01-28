@@ -1,0 +1,93 @@
+"#indexWindow": {
+	backgroundColor:"white",
+}
+
+"Label": {
+	width: Ti.UI.SIZE,
+	height: Ti.UI.SIZE,
+	color: "black"
+}
+
+"Button": {
+	top: "20dp",
+	height: Titanium.UI.SIZE
+}
+
+"#all": {
+	right: "20dp",
+	width: "45%",
+	height: "40dp"
+}
+
+"#autoRun": {
+	left: "20dp",
+	width: "45%",
+	height: "40dp"
+}
+
+"#nextRun[platform=ios]": {
+	top: "42dp",
+	height: "20dp",
+	left: "20%",
+	font: { fontSize: 12 }
+}
+"#nextRun[platform=android]": {
+	top: "52dp",
+	height: "20dp",
+	left: "20dp",
+	font: { fontSize: 12 }
+}
+
+"#view": {
+	top: "60dp",
+	height: Titanium.UI.FILL,
+	color: "red",
+	defaultItemTemplate: "template",
+	keepSectionsInSearch: "true"
+}
+
+"#title[formFactor=tablet]": {
+	left: "70dp",
+	font: { fontSize: 20, fontWeight: 'bold' }
+}
+
+"#subtitle[formFactor=tablet]": {
+	right: "115dp",
+	font: { fontSize: 14 }
+}
+
+"#title[formFactor=handheld]": {
+	left: "70dp",
+	top: "5dp",
+	font: { fontSize: 14, fontWeight: 'bold' }
+}
+
+"#subtitle[formFactor=handheld]": {
+	right: "115dp",
+	bottom: "5dp",
+	font: { fontSize: 12 }
+}
+
+"#info": {
+	right: "60dp",
+	top: "2dp",
+	height: "40dp",
+	width: "40dp"
+}
+
+"#autorun": {
+	right: "15dp",
+	top: "5dp",
+	height: "35dp",
+	width: "35dp"
+}
+
+"#image": {
+	left: "15dp",
+	width: "40dp",
+	borderColor:"#000"
+}
+
+"#search": {
+	showCancel: true
+}

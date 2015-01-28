@@ -1,0 +1,9 @@
+eclipse.preferences.version=1
+iosLaunchConfigurationAttributes/ATTR_MINIFY=true
+iosLaunchConfigurationAttributes/ATTR_PROJECT_NAME=QEA Helper
+iosLaunchConfigurationAttributes/ATTR_UPLOAD_DEBUG_SYMBOLS=false
+iosLaunchConfigurationAttributes/appid=com.appc.qeautomatorhelper
+iosLaunchConfigurationAttributes/certificate=QE Department (C64864TF2L)
+iosLaunchConfigurationAttributes/keychain=
+iosLaunchConfigurationAttributes/sdk_version=8.1
+iosLaunchConfigurationAttributes/uuid=f0a56225-0b09-4694-aecd-630953506ca6
