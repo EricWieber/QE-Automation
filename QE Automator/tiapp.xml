@@ -16,14 +16,14 @@
     <ios>
         <plist>
             <dict>
-            	<key>CFBundleURLTypes</key>
+                <key>CFBundleURLTypes</key>
                 <array>
                     <dict>
                         <key>CFBundleURLName</key>
                         <string>com.appc.qeautomator</string>
                         <key>CFBundleURLSchemes</key>
                         <array>
-                            <string>qeautomator</string> 
+                            <string>qeautomator</string>
                         </array>
                     </dict>
                 </array>
@@ -52,10 +52,11 @@
     <android xmlns:android="http://schemas.android.com/apk/res/android">
         <manifest>
             <application>
-                <activity android:configChanges="keyboardHidden|orientation" android:label="Automator"
-                          android:name=".AutomatorActivity" android:theme="@style/Theme.Titanium"
-                          android:launchMode="singleTask"
-                          android:alwaysRetainTaskState="true" >
+                <activity android:alwaysRetainTaskState="true"
+                    android:configChanges="keyboardHidden|orientation"
+                    android:label="Automator"
+                    android:launchMode="singleTask"
+                    android:name=".AutomatorActivity" android:theme="@style/Theme.Titanium">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN"/>
                         <category android:name="android.intent.category.LAUNCHER"/>
@@ -64,12 +65,11 @@
                         <action android:name="android.intent.action.VIEW"/>
                         <category android:name="android.intent.category.DEFAULT"/>
                         <category android:name="android.intent.category.BROWSABLE"/>
-                        <data android:scheme="automator" />
+                        <data android:scheme="automator"/>
                     </intent-filter>
                 </activity>
             </application>
-            <permission
-                android:name="com.exalture.test.withPermission" />
+            <permission android:name="com.exalture.test.withPermission"/>
             <uses-permission android:name="com.exalture.test.withPermission"/>
         </manifest>
     </android>
@@ -89,7 +89,7 @@
         <target device="iphone">true</target>
         <target device="mobileweb">true</target>
     </deployment-targets>
-    <sdk-version>3.5.0.GA</sdk-version>
+    <sdk-version>3.5.1.v20150122144120</sdk-version>
     <plugins>
         <plugin version="1.0">ti.alloy</plugin>
     </plugins>
