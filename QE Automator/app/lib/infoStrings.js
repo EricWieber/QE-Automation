@@ -32,5 +32,5 @@ exports.info = {
 		"EXPECTED RESULT:\n"+
 		"Alert is called and dismissed twice\n\n"+
 		"ACTUAL RESULT:\n"+
-		"Alert is called and dismissed once",
+		"Alert is called and dismissed once"
 };

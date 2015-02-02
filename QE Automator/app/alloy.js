@@ -5,6 +5,7 @@ Alloy.Globals.window = null;
 Alloy.Globals.alert = null;
 Alloy.Globals.wait = false;
 Alloy.Globals.log = [];
+Alloy.Globals.launches = 0;
 
 // Override the alert proxy to auto-dismiss if test is not running manually
 function alert(message, title, ok) {
@@ -16,7 +17,7 @@ function alert(message, title, ok) {
 	});
 	a.show();
 	Alloy.Globals.wait = true;
-	if (Alloy.Globals.alert !== false){
+	if (Alloy.Globals.alert !== false) {
 		Ti.Media.takeScreenshot(function(event) {
 			if (event.media)
 				Alloy.Globals.alert = event.media;
@@ -32,11 +33,11 @@ function alert(message, title, ok) {
 // message: String to save
 function _log(message) {
 	Ti.API.info(message);
-	Alloy.Globals.log.push(message);
+	Alloy.Globals.log += "; "+message;
 }
 
 // Check the log variable for the message
 // message: String to search log for
-function _checkLog(message){
+function _checkLog(message) {
 	return (Alloy.Globals.log.indexOf(message) > -1);
 }

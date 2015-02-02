@@ -24,10 +24,10 @@ function pass(){
 /*************************** Automation ***************************/
 var _window = window;
 var _actions = [
-	["call", clickButton],
-	["click", button, {}, 2],
-	["screenshot"],
-	["call", pass]
+	{call:clickButton},
+	{event:"click", object:button, time:2},
+	{screenshot:true},
+	{call:pass}
 ];
 
 /***** Set the above. Do not modify the below *****/

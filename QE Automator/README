@@ -20,49 +20,68 @@ _af._setup(_actions, _window, arguments[0] || {});
 
 - Add the testing actions to the '_actions' array:
 This is an array of actions that you want your test to execute.
-Actions array entry syntax: (Duration and timout are always optional and are in seconds or milliseconds)
-	Take a Screenshot:
-		["screenshot"]										//Captures the current screen. Uses takeScreenshot()
-		["screenshot", <object>]							//Captures the specified object. Uses object.toImage()		
+Actions array entry syntax: (Properties in [ ] are optional and <time> can be in seconds or milliseconds; Any integer over 240 will be counted as milliseconds)
+(Below is the syntax for QE Automator 2.0. If you need the syntax for v1.0, see: https://wiki.appcelerator.org/display/qe/QE+Automation+App+V1+-+Old)		
 	Call a function:
-		["call", <function>, [<parameters>]]				//Calls the specified function with the listed parameters
-		["call", <function>, [<parameters>], <timeout>]		//Calls the specified function with the listed parameters.
+		{call: <function>, [args: <parameters>, time: <int>] }	//'args' can be a single value or an array of values
 		EX:
-		["call", check]
-		["call", test, true]
-		["call", init, 4]
-		["call", toggleSetting, [true, 2], 6]
-	Tap on an object:
-		["tap", <object>, <click>, <duration>]				//Taps on an element for the specified duration. Click is a boolean that will fire a click event on the object if 'true'. This will show button presses.
-		EX:
-		["tap", button1, true, 1]
+		{call: setup}											//Calls the specified function with no parameters
+		{call: test, args: [30, "Hello"]}						//Calls the specified function with the listed parameters
+		{call: init, time: 10}									//Calls the specified function with no parameters and the listed timeout
+		{call: doStuff, args: false, time: 2000}				//Calls the specified function with the listed parameters and listed timeout
 	Fire an event:
-		[<event>, <object>, {<parameters>}, <duration>]		//Fires event on object with specified parameters. Duration is how long to wait before executing the next action
-		[<method string>, <object>, <duration>]				//Calls method on object. Used for calling sub-methods of objects. Duration is how long to wait before executing the next action
+		{event: <"event">, object: <object>, [args: <parameters>, time: <time>] }	//'args' must be an object, as if passed into 'fireEvent'
 		EX:
-		["click", tableView, {rowData : tableView.data[0].rows[0]}, 2]
-		["hide", docViewer, 3]
+		{event: "click", object: button}						//Fires event on object
+		{event: "close", object: window, time: 1000}			//Fires event on object. <time> is how long to wait before executing the next action
+		{event: "click", object: label, args: {text: "Yay"} }	//Fires event on object with specified parameters
+		{event: "click", object: button, args: {change: false}, time: 2}	//Fires event on object with specified parameters. <time> is how long to wait before executing the next action
+	Call a method:
+		{method: <"method">, object: <object>, [args: <parameters>, time: <time>] }
+		EX:
+		{method: "hide", object: docViewer}						//Calls the object's method
+		{method: "show", object: message, time: 1000}			//Calls the object's method. <time> is how long to wait before executing the next action
+		{method: "setVisible", object: label, args: true}		//Calls the object's method with specified parameters
+		{method: "setOpacity", object: window, args: 0.5, time: 2}	//Fires event on object with specified parameters. <time> is how long to wait before executing the next action
+	Take a screenshot:
+		{screenshot: <true/object>}							
+		Add 'screenshot: <true/object>' property to an action
+		EX:
+		{screenshot: true}										//Captures the current screen or object. Uses object.toImage() if specifying an object, uses takeScreenshot() if specifying 'true'.
+		{screenshot: button1}									//Captures the current screen or object. Uses object.toImage() if specifying an object, uses takeScreenshot() if specifying 'true'.
+		{call: foo, screenshot: true}							//Performs a screenshot action immediately after the current action. In the example, a screenshot would be taken after the 'foo' function returns
 	Wait for a time:
-		["wait", <time>]									//Wait for the specified time
+		{wait: <time/true>, [until:<"event">, object: <object>, time: <time>]}												
+		Add 'wait: <time>' property to an action	
 		EX:
-		["wait", 3]
+		{wait: 3}												//Wait for the specified time
+		{wait: 1500}											//Wait for the specified time
+		{wait: true, until: "sessioncompleted", object: Ti.App.iOS, time: 60}	//Wait until the specified event is fired on the specified object. Will timout at the specified time. Make sure to set a time or the wait will never complete if the event is not fired
+		{call: bar, wait: 2}									//Wait for the specified time immediately after the current action. In the example, the test would wait after the 'bar' function returns
 	Relaunch the current test:
-		["relaunch"]										//Relaunches the test. Usefull for checking options that change on load. Toggle them, then relaunch.
+		{relaunch: <int>}										//Relaunches the test. <int> is the number of test runs that this action will be executed. In the example, the relaunch action will execute twice, but will be skipped on the third run of the test (after the second relaunch)
+	Restart the app:
+		{restart: <int>}										//Restarts the app and relaunches the current test. <int> is the number of test runs that this action will be executed. In the example, the restart action will execute twice, but will be skipped on the third run of the test (after the second restart)
+	Skip actions on re-runs:
+		Add 'runs: <int>' property to an action	
+		EX:
+		{call: fooBar, runs: 2}									//Only execute this action on <int> number of runs. In the example, the action will execute twice, but will be skipped on the third run of the test (after the second relaunch)
 	Background the app*:
-		["background", <pause>, <duration>]					//Backgrounds the app for the specified amount of time. Execution of the test pauses if <pause> is true. *Requires the 'QEA Helper' app installed on the device
+		{background: <boolean>, [time: <time>] }					
 		EX:
-		["background", true, 30]
+		{background: true}										//Backgrounds the app. Execution of the test pauses if 'background' is true. *Requires the 'QEA Helper' app installed on the device
+		{background: false, time: 20}							//Backgrounds the app for the specified amount of time. Execution of the test pauses if 'background' is true. *Requires the 'QEA Helper' app installed on the device
+	Log output:
+		{log: <message>}										//Saves the message to a log variable and prints it to console
 	Verify output*:
-		["log", <message>]									//Check if the message was output during the test. *Will only check messages output with the '_log' function during the test [_log(message)].
-		EX:
-		["log", "[INFO] :  Hello there"]
+		{checkLog: <message>}									//Check if the message was saved to the log variable during the test. *Will only check messages output with the '_log' function during the test or with {log: <message>}
 		
 EXAMPLE:
 	var _actions = [
-		["wait", 2],
-		["screenshot"],
-		["call", check],
-		["click", button, {}, 2]
+		{call: check, args: [true, "Ok"], wait: 2}
+		{event: "click", object: button, screenshot: true, runs: 1},
+		{relaunch: 1},
+		{call: success, time: 4}
 	];
 	
 	
@@ -73,21 +92,22 @@ EXAMPLE:
 
 
 - Add an object to the 'tests' array in 'index.js'. The object should have this format:
-		{"name":"TIMOBXXXX", "section": <section>, <exclude/only>: <platforms>}
-	- name: The name of the controller for the test
-	- section: String indicating what section in the list the test will be added to. Visual/Organizational purposes only. (OPTIONAL)
-	- exclude/only: String indicating what platforms/OSs the test is excluded from or will only run on. (OPTIONAL)
+		{name:"TIMOBXXXX", section: <section>, <exclude/only>: <platforms>}
+	- name: Property for the name of the controller for the test
+	- section: Property indicating what section in the list the test will be added to. Visual/Organizational purposes only. (OPTIONAL)
+	- exclude/only: Property indicating what platforms/OSs the test is excluded from or will only run on. (OPTIONAL)
 	- platforms: A list of platforms/OSs. (OPTIONAL)
 		- If excluding, this is a string array of platforms that the test will not run on.
 		- If specifying 'only', this is the one platform/OS that the test will run on. Be sure that your test will ONLY run on this platform/OS (including new platforms/OS's added in the future)
+		- Not setting 'exclude' or 'only' indicates that the test can run on all platforms/OS's
 - Only use lower case strings for the 'exclude' and 'only' properties
 
 EXAMPLE:
 	var tests = [
-		{"name":"TIMOB0123", "section":"Alloy", "exclude":"mobileweb"},
-		{"name":"TIMOB1234", "exclude":["android", "ios"]},
-		{"name":"TIMOB5678", "only": "ios"},
-		{"name":"TIMOB9012"},
+		{name:"TIMOB0123", section:"Alloy", exclude:"mobileweb"},
+		{name:"TIMOB1234", exclude:["android", "ios"]},
+		{name:"TIMOB5678", only: "ios"},
+		{name:"TIMOB9012"},
 	];
 	
 - Add the test's info to the info array in 'app/lib/infoStrings.js': (This is not required for tests, but is highly recommended to do)
@@ -116,6 +136,7 @@ The below test will pass for iPhone 6 and 6 Plus that have the correct size, fai
 
 
 - Known issues:
-1. Can only have 1 "relaunch" command in actions array
-2. Cannot see button pushes (UI does not show the click on the button)
+	- Cannot see button pushes (UI does not show the click on the button)
+	- Restarting wipes out previous tests' results
+	- Can only dismiss one alert at a time
 

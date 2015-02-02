@@ -1,13 +1,14 @@
-var win = Ti.UI.createWindow({
+var window = Ti.UI.createWindow({
 	backgroundColor: "white"
 });
 
 var button = Ti.UI.createButton({
-	title: "Button"
+	title: "Button",
+	borderColor: "black"
 });
 
-win.add(button);
-win.open();
+window.add(button);
+window.open();
 
 function clickButton(){
 	alert("I was clicked");	
@@ -21,12 +22,12 @@ function pass(){
 }
 
 /*************************** Automation ***************************/
-var _window = win;
+var _window = window;
 var _actions = [
-	["call", clickButton],
-	["click", button, {}, 2],
-	["screenshot"],
-	["call", pass]
+	{call:clickButton},
+	{event:"click", object:button, time:2},
+	{screenshot:true},
+	{call:pass}
 ];
 
 /***** Set the above. Do not modify the below *****/

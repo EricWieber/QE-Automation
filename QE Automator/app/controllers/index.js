@@ -19,15 +19,15 @@ To add a test to the project:
 Documentation: https://wiki.appcelerator.org/display/qe/QE+Automation+App
 *************************************************************************/
 var tests = [
-	{"name":"TIMOBClassic"},
-	{"name":"TIMOBAlloy"},
-	{"name":"TIMOBInvalid", "only":"nothing"}
+	{name:"TIMOBClassic"},
+	{name:"TIMOBAlloy"},
+	{name:"TIMOBInvalid", only:"nothing"}
 ];
 
 ////////////// DO NOT MODIFY BELOW THIS LINE //////////////
 
 // Sort the tests by name
-function sortTests(){
+function sortTests() {
 	tests.sort(function(a, b) { return parseInt(a.name.replace(/\D/g,'')) - parseInt(b.name.replace(/\D/g,'')); });
 }
 sortTests();
@@ -37,12 +37,29 @@ var info = infoStrings.info;
 
 var run = [];
 var curTest = null;
+var images = [];
 
 Alloy.Globals.window = $.indexWindow;
 loadList();
+$.indexWindow.addEventListener("close", function() {
+	Ti.App.Properties.setObject("data", {run:run, curTest:curTest, images:images, log:Alloy.Globals.log, launches:Alloy.Globals.launches});
+});
+$.indexWindow.addEventListener("open", function() {
+	var data = Ti.App.Properties.getObject("data", null);
+	if (data === null)
+		return;
+	run = data.run || [];
+	curTest = data.curTest || null;
+	images = data.images || [];
+	results = data.results || [];
+	Alloy.Globals.log = data.log || [];
+	Alloy.Globals.launches = data.launches || 0;
+	
+	if (curTest !== null)
+		Alloy.Globals.window.fireEvent("runNext", {relaunch:true});
+});
 $.indexWindow.open();
 
-var images= [];
 var imageClicked = false;
 var playClicked = false;
 var infoClicked = false;
@@ -57,7 +74,7 @@ function loadList() {
 	var sections = [];
 	var secItems = [];
 	
-	for (x in tests){
+	for (x in tests) {
 		if (typeof tests[x].section == 'undefined')
 			continue;
 				
@@ -69,7 +86,7 @@ function loadList() {
 	secItems["Valid"] = [];
 	secItems["Do Not Run"] = [];
 	
-	for (y in tests){
+	for (y in tests) {
 		var runnable = isValid(tests[y]);
 			
 		var item = {
@@ -79,7 +96,7 @@ function loadList() {
 			image:{image:"/appicon.png"},
 			properties: {searchableText:tests[y].name, selectionStyle:Ti.Platform.name == "iPhone OS"?Titanium.UI.iPhone.ListViewCellSelectionStyle.NONE:""}
 		};
-		if (runnable){
+		if (runnable) {
 			if (typeof tests[y].section != 'undefined')
 				secItems[tests[y].section].push(item);
 			else
@@ -87,7 +104,7 @@ function loadList() {
 		} else
 			secItems["Do Not Run"].push(item);
 	}
-	for (z in secItems){
+	for (z in secItems) {
 		sections[findSec(sections, z)].setItems(secItems[z]);
 	}
 
@@ -97,12 +114,12 @@ function loadList() {
 // Creates a section in the ListView
 // s: String of the section's name
 // rsbutton: Boolean if there should be a "run section" button on the section
-function createSection(s, rsbutton){
+function createSection(s, rsbutton) {
 	var hdr = Ti.UI.createView({backgroundColor: "#eee"});
 	var lbl = Ti.UI.createLabel({text:s, left:"10dp"});
-	if (rsbutton){
+	if (rsbutton) {
 		var btn = Ti.UI.createButton({title:"Run Section", right:"10dp", sec:s});
-		btn.addEventListener("click", function(e){sectionClick(e.source.sec);});
+		btn.addEventListener("click", function(e) {sectionClick(e.source.sec);});
 		hdr.add(btn);
 	}
 	hdr.add(lbl);
@@ -114,7 +131,7 @@ function createSection(s, rsbutton){
 // Find a section by id and return its index in it's parent's array. Returns the location of the "Valid" section if not found.
 // sections: Array of sections to search through; parent array
 // name: String of section name to find
-function findSec(sections, name){
+function findSec(sections, name) {
 	for (x in sections)
 		if (sections[x].id == name)
 			return x;
@@ -123,13 +140,13 @@ function findSec(sections, name){
 
 // Is the test valid for the current platform/OS
 // test: Test to validate
-function isValid(test){
+function isValid(test) {
 	var ex = typeof test.exclude == 'undefined' ? false : true;
 	var on = typeof test.only == 'undefined' ? false : true;
 	
 	var os = Ti.Platform.name == "iPhone OS" ? "ios" : Ti.Platform.name.toLowerCase();
 	
-	if (ex === true){
+	if (ex === true) {
 		ex = test.exclude.indexOf(os);
 		if (ex >= 0 || on === -1) return false;
 		
@@ -143,7 +160,7 @@ function isValid(test){
 		if (Ti.Platform.model.indexOf('sdk') !== -1 && ex >= 0) return false;
 	}
 	
-	if (on === true){
+	if (on === true) {
 		on = test.only.indexOf(os);
 		if (on !== -1) return true;
 		
@@ -199,7 +216,7 @@ function infoClick(e) {
     	infoWeb.html=info[item.title.text].replace(/\n/g, "<br>")+"<hr>JIRA TICKET:<br>Loading...";
 	    	
     var xhr = Ti.Network.createHTTPClient({timeout: 4000});
-    xhr.onload = function(){
+    xhr.onload = function() {
     	var doc = this.responseXML.documentElement;
     	var items = doc.getElementsByTagName("item");
 		
@@ -208,8 +225,8 @@ function infoClick(e) {
     		items.item(0).getElementsByTagName("environment").item(0).text+"\n\n"+
     		items.item(0).getElementsByTagName("description").item(0).text;
     };
-    xhr.onerror = function(e){
-    	setTimeout(function(){
+    xhr.onerror = function(e) {
+    	setTimeout(function() {
 	    	infoWeb.html = infoWeb.html.replace("<br>Loading...", "<br>Cannot load JIRA ticket");
     	}, 250);
     };
@@ -219,7 +236,7 @@ function infoClick(e) {
     xhr.open('GET', "https://jira.appcelerator.org/si/jira.issueviews:issue-xml/"+test+"/"+test+".xml");
     xhr.send();
     
-    infoWin.addEventListener("click", function(e){ infoWin.close(); });
+    infoWin.addEventListener("click", function(e) { infoWin.close(); });
     
     infoWin.add(infoView);
     infoWin.open();  
@@ -233,11 +250,11 @@ function imageClick(e) {
 	
 	var win = Ti.UI.createWindow({backgroundColor:"#eee"});
 	var viewImages = [];
-	for (x in images[item.title.text]){
+	for (x in images[item.title.text]) {
 		var image = Ti.UI.createImageView({image:images[item.title.text][x], borderColor:"#000"});
 		viewImages.push(image);
 	}
-	if (viewImages.length == 0){
+	if (viewImages.length == 0) {
 		viewImages.push(Ti.UI.createImageView({borderColor:"#000", width:"100%", height:"100%"}));
 	}
 	var scroll = Ti.UI.createScrollableView({views:viewImages, showPagingControl:true, pagingControlHeight:"10dp",
@@ -245,7 +262,7 @@ function imageClick(e) {
 	var title = Ti.UI.createLabel({text:item.title.text, bottom:0, left:"5dp", height:"6%"});
 	var status = Ti.UI.createLabel({text:item.subtitle.text, backgroundColor:item.subtitle.backgroundColor, bottom:0, right:0, height:"5%", font: { fontSize: 14 }});
 	
-	win.addEventListener("click", function(){
+	win.addEventListener("click", function() {
 		win.close();
 	});
 	
@@ -265,7 +282,7 @@ function playClick(e) {
     curTest = run[0];
     
     var temps = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory).getDirectoryListing();
-    for (x in temps){
+    for (x in temps) {
     	if (temps[x].indexOf(curTest) > -1) {
     		Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, temps[x]).deleteFile();
     	}
@@ -274,7 +291,7 @@ function playClick(e) {
     Alloy.Globals.log = [];
     
     Alloy.Globals.alert = null;
-	try { var winx = Alloy.createController(item.title.text, {automate:true, relaunch:false}).getView(); } catch (error) {Ti.API.error(error); $.indexWindow.fireEvent("runNext"); return;}
+	try { var winx = Alloy.createController(curTest, {automate:true, relaunch:false, test:curTest}).getView(); } catch (error) {Ti.API.error(error); $.indexWindow.fireEvent("runNext"); return;}
     try { winx.open();} catch (error) {Ti.API.debug("Window already opened from controller "+curTest);};
 }
 
@@ -298,39 +315,39 @@ function sectionClick(sec) {
     Alloy.Globals.log = [];
         
     Alloy.Globals.alert = null;
-	try { var winx = Alloy.createController(curTest, {automate:true, relaunch:false}).getView(); } catch (error) {Ti.API.error(error); $.indexWindow.fireEvent("runNext"); return;}
+	try { var winx = Alloy.createController(curTest, {automate:true, relaunch:false, test:curTest}).getView(); } catch (error) {Ti.API.error(error); $.indexWindow.fireEvent("runNext"); return;}
     try { winx.open();} catch (error) {Ti.API.debug("Window already open from controller "+curTest);};
 }
 
 // Click on the 'Run All Tests' button to automate all tests
 function runClick() {  
 	run = [];  	
-	for (i = 0, j = $.view.sections.length; i<j-1; i++){
+	for (i = 0, j = $.view.sections.length; i<j-1; i++) {
 		for (x in $.view.sections[i].items)
 			run.push($.view.sections[i].items[x].title.text);
 	}
     curTest = run[0];
     
     var temps = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory).getDirectoryListing();
-    for (x in temps){
+    for (x in temps) {
     	Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, temps[x]).deleteFile();
     }
     images = [];
     Alloy.Globals.log = [];
      
     Alloy.Globals.alert = null;
-	try { var winx = Alloy.createController(curTest, {automate:true, relaunch:false}).getView(); } catch (error) {Ti.API.error(error); $.indexWindow.fireEvent("runNext"); return;}
+	try { var winx = Alloy.createController(curTest, {automate:true, relaunch:false, test:curTest}).getView(); } catch (error) {Ti.API.error(error); $.indexWindow.fireEvent("runNext"); return;}
     try { winx.open();} catch (error) {Ti.API.debug("Window already open from controller "+curTest);};
 }
 
 // Click on the autorun button and toggle the automatic execution of tests
 function autoRun() {
-	if ($.autoRun.title == "Auto Run: True"){
+	if ($.autoRun.title == "Auto Run: True") {
 		clearInterval(autoTimer);
 		$.autoRun.title = "Auto Run: False";
 		$.nextRun.text = "";
 	} else {
-		autoTimer = setInterval(function(){
+		autoTimer = setInterval(function() {
 			$.nextRun.text = "Next: "+getTime(1);
 			runClick();
 		}, 3600000);
@@ -340,22 +357,25 @@ function autoRun() {
 };
 
 // Run the next test in tests array or relaunch the same test if relaunch is true
-$.indexWindow.addEventListener('runNext', function(e){
-	setTimeout(function(){
+$.indexWindow.addEventListener('runNext', function(e) {
+	setTimeout(function() {
 		var index = run.indexOf(curTest);
-		if (!e.relaunch)
+		if (!e.relaunch) {
 			index++;
+			Alloy.Globals.log = [];
+			Alloy.Globals.launches = 0;
+		}
 		
-		if (index < 0 || index >= run.length){
+		if (index < 0 || index >= run.length) {
 			curTest = null;
+			Ti.App.Properties.setObject("data", {run:run, curTest:curTest, images:images, log:Alloy.Globals.log, launches:Alloy.Globals.launches});
 			return;
 		}
 	
 	    curTest = run[index];
-    	Alloy.Globals.log = [];
 	    
 	    Alloy.Globals.alert = null;
-	    try { var winx = Alloy.createController(curTest, {automate:true, relaunch:e.relaunch}).getView(); } catch (error) {Ti.API.error(error); $.indexWindow.fireEvent("runNext"); return;}
+	    try { var winx = Alloy.createController(curTest, {automate:true, relaunch:e.relaunch, test:curTest}).getView(); } catch (error) {Ti.API.error(error); $.indexWindow.fireEvent("runNext"); return;}
 	    try { winx.open();} catch (error) {Ti.API.debug("Window already open from controller "+curTest);};
 	}, 500);
 });
@@ -365,9 +385,9 @@ $.indexWindow.addEventListener('updateItem', function(e) {
 	var ind;
 	var item;
 	var section;
-	for (x in $.view.sections){
+	for (x in $.view.sections) {
 		for (y in $.view.sections[x].items) {
-			if ($.view.sections[x].items[y].title.text == curTest){
+			if ($.view.sections[x].items[y].title.text == curTest) {
 				ind = y;
 				item = $.view.sections[x].items[y];
 				section = $.view.sections[x];
@@ -381,11 +401,11 @@ $.indexWindow.addEventListener('updateItem', function(e) {
 	else
 		item.image.image = "/appicon.png";
 			
-	if (e.retest){
+	if (e.retest) {
 		item.subtitle.text = " Error: Try Retest? ";
 		item.subtitle.backgroundColor = "#66f";
 	} else{
-		switch (e.result){
+		switch (e.result) {
 			case true:
 				item.subtitle.text = " Passed; "+getTime();
 				item.subtitle.backgroundColor = "green";
@@ -413,8 +433,8 @@ $.indexWindow.addEventListener('updateItem', function(e) {
 });
 
 // Take a screenshot of a specified view/window or from the system level
-$.indexWindow.addEventListener('screenshot', function(e){
-	if (Alloy.Globals.alert != null){
+$.indexWindow.addEventListener('screenshot', function(e) {
+	if (Alloy.Globals.alert != null && e.object === true) {
 		if (typeof images[curTest] == 'undefined')
 			images[curTest] = [];
 			
@@ -439,7 +459,7 @@ $.indexWindow.addEventListener('screenshot', function(e){
 		file.write(blob);
 		images[curTest][images[curTest].length] = file;
 	} else {
-		Ti.Media.takeScreenshot(function(event){
+		Ti.Media.takeScreenshot(function(event) {
 			if (event.media) {
 				var blob = event.media;
 		
@@ -456,7 +476,7 @@ $.indexWindow.addEventListener('screenshot', function(e){
 
 // Get the current time in HH:MM:SS format
 // add: Integer added to hours. Used for "Next Run"
-function getTime(add){
+function getTime(add) {
     var currentTime = new Date();
     var hours = currentTime.getHours()+(add || 0);
     if (hours > 12)
@@ -472,7 +492,7 @@ function getTime(add){
 }
 
 // Click listener for Android to show kayboard on searchbar
-$.search.addEventListener("click", function(){
+$.search.addEventListener("click", function() {
 	$.search.softKeyboardOnFocus = Ti.UI.Android.SOFT_KEYBOARD_SHOW_ON_FOCUS;
     $.search.focus();
 });
