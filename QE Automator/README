@@ -44,12 +44,13 @@ Actions array entry syntax: (Properties in [ ] are optional and <time> can be in
 		{method: "setVisible", object: label, args: true}		//Calls the object's method with specified parameters
 		{method: "setOpacity", object: window, args: 0.5, time: 2}	//Fires event on object with specified parameters. <time> is how long to wait before executing the next action
 	Take a screenshot:
-		{screenshot: <true/object>}							
+		{screenshot: <true/object>, [compare: <boolean>]}		//'compare' indicates if this screenshot should be compared with the DB's image for the same action. Default is 'true'. See the "How to compare images" section below.
 		Add 'screenshot: <true/object>' property to an action
 		EX:
-		{screenshot: true}										//Captures the current screen or object. Uses object.toImage() if specifying an object, uses takeScreenshot() if specifying 'true'.
-		{screenshot: button1}									//Captures the current screen or object. Uses object.toImage() if specifying an object, uses takeScreenshot() if specifying 'true'.
+		{screenshot: true}										//Captures the current screen or object. Uses takeScreenshot().
+		{screenshot: button1}									//Captures the current screen or object. Uses object.toImage().
 		{call: foo, screenshot: true}							//Performs a screenshot action immediately after the current action. In the example, a screenshot would be taken after the 'foo' function returns
+		{screenshot: true, compare:false}						//Captures the current screen or object. Uses takeScreenshot(). Does not do image comparison.
 	Wait for a time:
 		{wait: <time/true>, [until:<"event">, object: <object>, time: <time>]}												
 		Add 'wait: <time>' property to an action	
@@ -83,6 +84,13 @@ EXAMPLE:
 		{relaunch: 1},
 		{call: success, time: 4}
 	];
+	
+- How to compare images:
+	- Add a screenshot action to a test (with compare:true or with no compare property specified)
+	- Run the test
+	- View the test's images from the main menu. Find the image you want to compare
+	- Click the 'Options' button and select "Upload Image for Comparisons". You should get an alert saying "Image Uploaded"
+	- Run the test again. Now, the screenshot will be compared to the uploaded image
 	
 	
 - You can also call functions inside of the test itself to help with basic test needs or to verify output:

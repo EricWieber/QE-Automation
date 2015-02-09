@@ -1,0 +1,25 @@
+#image-diff {
+    border: 1px solid #ccc;
+    color: #ccc;
+    font-size: 32px;
+    line-height: 330px;
+    text-align: center;
+    left: 2%;
+    max-width: 95%;
+    max-height: 95%;
+    overflow: hidden;
+    position: relative;
+}
+
+#diff-results {
+	width: 80%;
+	left: 0;
+}
+
+#uploadBtn {
+	width: 17%;
+	height: 5%;
+	right: 3%;
+	bottom: 10px;
+	position: absolute;
+}

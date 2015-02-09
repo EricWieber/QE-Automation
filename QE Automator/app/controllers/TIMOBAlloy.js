@@ -10,9 +10,9 @@ function pass(){
 /*************************** Automation ***************************/
 var _window = $.window;
 var _actions = [
+	{screenshot:true},
 	{call:clickButton},
 	{event:"click", object:$.button, time:2},
-	{screenshot:true},
 	{call:pass}
 ];
 

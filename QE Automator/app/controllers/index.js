@@ -35,11 +35,26 @@ sortTests();
 var infoStrings = require("infoStrings");
 var info = infoStrings.info;
 
+var Cloud = require('ti.cloud');
+Cloud.debug = true;
+
+Cloud.Users.login({
+    login: 'qeautomator@appcelerator.com',
+    password: 'automator'
+}, function (e) {
+    if (e.success) {
+        Ti.API.debug("Connected to DB");
+    } else {
+        Ti.API.debug("Cannot connect to DB");
+    }
+});
+
 var run = [];
 var curTest = null;
 var images = [];
 
 Alloy.Globals.window = $.indexWindow;
+
 loadList();
 $.indexWindow.addEventListener("close", function() {
 	Ti.App.Properties.setObject("data", {run:run, curTest:curTest, images:images, log:Alloy.Globals.log, launches:Alloy.Globals.launches});
@@ -236,7 +251,7 @@ function infoClick(e) {
     xhr.open('GET', "https://jira.appcelerator.org/si/jira.issueviews:issue-xml/"+test+"/"+test+".xml");
     xhr.send();
     
-    infoWin.addEventListener("click", function(e) { infoWin.close(); });
+    infoWin.addEventListener("click", function(e) { if (e.source != "[object WebView]") infoWin.close(); });
     
     infoWin.add(infoView);
     infoWin.open();  
@@ -261,16 +276,121 @@ function imageClick(e) {
 		borderColor:"#000", width:"90%", height:"90%", top:"4%", backgroundColor:"#fff"});
 	var title = Ti.UI.createLabel({text:item.title.text, bottom:0, left:"5dp", height:"6%"});
 	var status = Ti.UI.createLabel({text:item.subtitle.text, backgroundColor:item.subtitle.backgroundColor, bottom:0, right:0, height:"5%", font: { fontSize: 14 }});
+	var options = Ti.UI.createButton({title:"Options", bottom: 0, height:"5%"});
 	
-	win.addEventListener("click", function() {
-		win.close();
+	// Options button
+	options.addEventListener("click", function() {
+		var dialog = Ti.UI.createOptionDialog({
+			cancel: 3,
+			options: ['Check Differences with DB', 'Upload Image for Comparisons', 'Clear Image from DB', 'Cancel'],
+			selectedIndex: 0,
+			destructive: 2,
+			title: 'Options'
+		});
+		
+		dialog.addEventListener("click", function(e) {
+			var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, item.title.text+"-"+scroll.getCurrentPage()+
+				Ti.Platform.model+
+				Ti.Platform.version+
+				Ti.Platform.displayCaps.density+
+				Ti.Platform.displayCaps.dpi+
+				Ti.Platform.displayCaps.platformWidth+
+				Ti.Platform.displayCaps.platformHeight+
+				".png"
+			);
+			switch (e.index) {
+				case 0:
+					var checkWindow = Ti.UI.createWindow({backgroundImage:file.resolve(), backgroundColor:'white'});
+					
+					checkWindow.addEventListener("click", function() {
+						checkWindow.close();
+					});
+					
+					checkWindow.open();					
+					break;
+				case 1:
+					Cloud.Photos.query({
+					    page: 1,
+					    per_page: 20,
+					    where: { 'title': file.name }
+					}, function (e) {
+					    if (e.success) {
+					    	if (e.photos.length > 0) {
+						        Cloud.Photos.update({
+								    photo_id: e.photos[0].id,
+								    photo: Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, item.title.text+"-"+scroll.getCurrentPage()+".png")
+								}, function (e2) {
+								    if (e2.success)
+								        alert("Image uploaded.");
+								    else
+								 		alert("Unable to upload image.");
+								});
+							} else {
+								Cloud.Photos.create({
+								    photo: Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, item.title.text+"-"+scroll.getCurrentPage()+".png"),
+								    title: file.name
+								}, function (e2) {
+									if (e2.success) 
+										alert("Image uploaded");
+									else
+										alert("Unable to upload image");
+								});
+							}
+					    } else
+					        alert("Unable to upload image!");
+					});
+					break;
+				case 2:
+					Cloud.Photos.query({
+					    page: 1,
+					    per_page: 20,
+					    where: { 'title': file.name }
+					}, function (e) {
+					    if (e.success) {
+					    	for (x in e.photos) {
+						        Cloud.Photos.remove({
+								    photo_id: e.photos[x].id,
+								}, function (e2) {
+								    if (e2.success)
+								        alert("Image removed.");
+								    else
+								 		alert("Unable to remove image.");
+								});
+							}
+					    } else
+					        alert("Unable to remove image!");
+					});		
+					break;
+			}
+		});
+		dialog.show();
+	});
+	
+	// Window construction
+	win.addEventListener("click", function(e) {
+		if (e.source != "[object TiUIButton]")
+			win.close();
 	});
 	
 	win.add(scroll);
+	win.add(options);
 	win.add(title);
 	win.add(status);
 	win.open();
 }
+
+Ti.App.addEventListener('CompareComplete', function(e) {
+	var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, e.name+
+		Ti.Platform.model+
+		Ti.Platform.version+
+		Ti.Platform.displayCaps.density+
+		Ti.Platform.displayCaps.dpi+
+		Ti.Platform.displayCaps.platformWidth+
+		Ti.Platform.displayCaps.platformHeight+
+		".png"
+	);
+	file.write(Ti.Utils.base64decode(e.image.replace(/^data:image\/(png|jpg);base64,/, "")));
+});
 
 // Click on a row's play button to automate a single test
 // e: Row clicked
@@ -368,6 +488,7 @@ $.indexWindow.addEventListener('runNext', function(e) {
 		
 		if (index < 0 || index >= run.length) {
 			curTest = null;
+			Alloy.Globals.alert = false;
 			Ti.App.Properties.setObject("data", {run:run, curTest:curTest, images:images, log:Alloy.Globals.log, launches:Alloy.Globals.launches});
 			return;
 		}
@@ -434,7 +555,8 @@ $.indexWindow.addEventListener('updateItem', function(e) {
 
 // Take a screenshot of a specified view/window or from the system level
 $.indexWindow.addEventListener('screenshot', function(e) {
-	if (Alloy.Globals.alert != null && e.object === true) {
+	Alloy.Globals.wait = true;
+	if (Alloy.Globals.alert != null && e.object === "alert") {
 		if (typeof images[curTest] == 'undefined')
 			images[curTest] = [];
 			
@@ -442,6 +564,12 @@ $.indexWindow.addEventListener('screenshot', function(e) {
 		file.write(Alloy.Globals.alert);
 		images[curTest][images[curTest].length] = file;
 		Alloy.Globals.alert = null;
+		
+		if (e.compare) {
+			compare(file);
+		} else {
+			Alloy.Globals.wait = false;
+		}
 		
 		return;
 	}
@@ -458,6 +586,12 @@ $.indexWindow.addEventListener('screenshot', function(e) {
 		var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, curTest+"-"+images[curTest].length+".png");
 		file.write(blob);
 		images[curTest][images[curTest].length] = file;
+		
+		if (e.compare) {
+			compare(file);
+		} else {
+			Alloy.Globals.wait = false;
+		}
 	} else {
 		Ti.Media.takeScreenshot(function(event) {
 			if (event.media) {
@@ -469,10 +603,54 @@ $.indexWindow.addEventListener('screenshot', function(e) {
 				var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, curTest+"-"+images[curTest].length+".png");
 				file.write(blob);
 				images[curTest][images[curTest].length] = file;
+				
+				if (e.compare) {
+					compare(file);
+				} else {
+					Alloy.Globals.wait = false;
+				}
 			}
 		});
 	}
 });
+
+function compare(pic){
+	var webview = Ti.UI.createWebView({url: "/comparisons/index.html", visible:false});
+	var webwindow = Ti.UI.createWindow();
+	
+	var f1 = pic.resolve();
+	var fstr = pic.name.replace(".png", "")+
+		Ti.Platform.model+
+		Ti.Platform.version+
+		Ti.Platform.displayCaps.density+
+		Ti.Platform.displayCaps.dpi+
+		Ti.Platform.displayCaps.platformWidth+
+		Ti.Platform.displayCaps.platformHeight+
+		".png";
+	var f2 = "";
+	
+	webview.addEventListener('beforeload',function() {
+		webview.evalJS("var f1='"+f1+"'; var f2='"+f2+"'; var name='"+pic.name.replace(".png", "")+"';");
+	});
+	
+	Cloud.Photos.query({
+	    page: 1,
+	    per_page: 1,
+	    where: { 'title': fstr }
+	}, function (e) {
+	    if (e.success && e.photos.length > 0) {
+	    	f2 = e.photos[0].urls['original'];
+	    	webwindow.add(webview);
+			webwindow.open();
+	    } else
+	    	Alloy.Globals.wait = false;
+	});
+	
+	Ti.App.addEventListener("CompareComplete", function(e) {
+		Alloy.Globals.wait = false;
+		webwindow.close();
+	});
+}
 
 // Get the current time in HH:MM:SS format
 // add: Integer added to hours. Used for "Next Run"

@@ -201,14 +201,14 @@ function automate(actions, window, args) {
 				action.wait = undefined;
 			} else {
 				if (wt === "boolean") {
-					try {action.object.removeEventListener(action.until, callback);} catch (error) {Ti.API.warn("Improper 'wait' action");}
+					try {action.object.removeEventListener(action.until, callback);} catch (error) {Ti.API.warn("Improper 'wait' action syntax");}
 					clearTimeout(timeout);
 				}
 				count = null;
 				if (typeof action.screenshot != "undefined" && action.screenshot) {			//Screenshot added to action (screenshot after execution)
 					count = index == actions.length-1 ? 4 : 3;
 					setTimeout(function() {
-						try {Alloy.Globals.window.fireEvent("screenshot", {object:action.screenshot, image:action.screenshot===true?null:action.screenshot.toImage(null, true)});} catch (error) {retest = true; Ti.API.error(error);}
+						try {Alloy.Globals.window.fireEvent("screenshot", {object:action.screenshot, compare:action.compare || true, image:action.screenshot===true?null:action.screenshot==="alert"?"alert":action.screenshot.toImage(null, true)});} catch (error) {retest = true; Ti.API.error(error);}
 						action.screenshot = false;
 					}, index==0?1000:0);
 				} else {
@@ -224,6 +224,9 @@ function automate(actions, window, args) {
 			}
 		}
 	}, 500);
+	Ti.App.addEventListener("CompareComplete", function(e) {
+		tempResult = e.diff <= 0 ? true : false;
+	});
 }
 exports.automate = automate;
 

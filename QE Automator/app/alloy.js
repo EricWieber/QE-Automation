@@ -2,7 +2,7 @@ if (OS_ANDROID)
     Alloy.Globals.url = Ti.Android.currentActivity.intent.data;
 
 Alloy.Globals.window = null;
-Alloy.Globals.alert = null;
+Alloy.Globals.alert = false;
 Alloy.Globals.wait = false;
 Alloy.Globals.log = [];
 Alloy.Globals.launches = 0;
