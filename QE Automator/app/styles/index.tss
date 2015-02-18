@@ -19,7 +19,7 @@
 	height: "40dp"
 }
 
-"#autoRun": {
+"#options": {
 	left: "20dp",
 	width: "45%",
 	height: "40dp"

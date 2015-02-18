@@ -17,7 +17,9 @@ function clickButton(){
 button.addEventListener("click", clickButton);
 
 function pass(){
-	//Do anything here
+	//This function returns true to indicate the test passed
+	//Returning false means the test failed
+	//No return or returning 'check' means the results should be checked manually.
 	return true;
 }
 

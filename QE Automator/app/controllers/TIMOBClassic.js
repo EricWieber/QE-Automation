@@ -16,18 +16,12 @@ function clickButton(){
 
 button.addEventListener("click", clickButton);
 
-function pass(){
-	//Do anything here
-	return true;
-}
-
 /*************************** Automation ***************************/
 var _window = window;
 var _actions = [
 	{call:clickButton},
 	{event:"click", object:button, time:2},
-	{screenshot:true},
-	{call:pass}
+	{screenshot:true}
 ];
 
 /***** Set the above. Do not modify the below *****/

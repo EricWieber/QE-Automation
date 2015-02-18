@@ -28,47 +28,72 @@ var tests = [
 
 // Sort the tests by name
 function sortTests() {
+	for (x in tests)
+		tests[x].name = tests[x].name.replace(/--/g, '-');
 	tests.sort(function(a, b) { return parseInt(a.name.replace(/\D/g,'')) - parseInt(b.name.replace(/\D/g,'')); });
 }
 sortTests();
 
-var infoStrings = require("infoStrings");
-var info = infoStrings.info;
-
 var Cloud = require('ti.cloud');
-Cloud.debug = true;
+//Cloud.debug = true;
 
+// Log in user for image upload/comparisons
 Cloud.Users.login({
     login: 'qeautomator@appcelerator.com',
-    password: 'automator'
+    password: '<Password Here>'
 }, function (e) {
-    if (e.success) {
-        Ti.API.debug("Connected to DB");
-    } else {
-        Ti.API.debug("Cannot connect to DB");
-    }
+    if (e.success)
+        Ti.API.info("Connected to DB");
+    else
+        Ti.API.warn("Cannot connect to DB");
 });
 
 var run = [];
 var curTest = null;
+var rows = [];
 var images = [];
+
+// Create directory for test images
+// Load existing images into the images array
+(function(){
+	var d = Titanium.Filesystem.getFile(Titanium.Filesystem.tempDirectory, 'testRunImages');
+	if (!d.exists())
+		d.createDirectory();
+		
+	var temps = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages").getDirectoryListing();
+	for (x in temps) {
+		var fn = temps[x].replace('.png', '').split('--');
+		if (typeof images[fn[0]] == "undefined")
+			images[fn[0]] = [];
+		images[fn[0]][fn[1]] = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+temps[x]);
+	}
+})();
 
 Alloy.Globals.window = $.indexWindow;
 
 loadList();
+
+// Save the state of the app when closing teh main window
 $.indexWindow.addEventListener("close", function() {
-	Ti.App.Properties.setObject("data", {run:run, curTest:curTest, images:images, log:Alloy.Globals.log, launches:Alloy.Globals.launches});
+	Ti.App.Properties.setObject("data", {run:run, curTest:curTest, rows:JSON.stringify(rows), log:Alloy.Globals.log, launches:Alloy.Globals.launches});
 });
+
+// Restore the state of the app if opening ofter a close
 $.indexWindow.addEventListener("open", function() {
 	var data = Ti.App.Properties.getObject("data", null);
 	if (data === null)
 		return;
 	run = data.run || [];
 	curTest = data.curTest || null;
-	images = data.images || [];
-	results = data.results || [];
+	rows = JSON.parse(data.rows) || [];
 	Alloy.Globals.log = data.log || [];
 	Alloy.Globals.launches = data.launches || 0;
+	
+	for (x in rows) {
+		var item = rows[x].item;
+		item.image.image = typeof images[item.title.text] != 'undefined' ? images[item.title.text][0] : '/appicon.png';
+		$.view.sections[rows[x].sec].updateItemAt(rows[x].ind, item);
+	}
 	
 	if (curTest !== null)
 		Alloy.Globals.window.fireEvent("runNext", {relaunch:true});
@@ -108,7 +133,7 @@ function loadList() {
 			id: tests[y].name,
 			title:{text:tests[y].name},
 			subtitle:{text:runnable == true ? "Not Run" : "Invalid", backgroundColor:"transparent"},
-			image:{image:"/appicon.png"},
+			image:{image:(images == [] || typeof images[tests[y].name] == 'undefined') ? "/appicon.png" : images[tests[y].name][0]},
 			properties: {searchableText:tests[y].name, selectionStyle:Ti.Platform.name == "iPhone OS"?Titanium.UI.iPhone.ListViewCellSelectionStyle.NONE:""}
 		};
 		if (runnable) {
@@ -214,6 +239,7 @@ function rowClick(e) {
 // Pulls from the JIRA ticket if able, otherwise loads from infoStrings array
 // e: Row clicked
 function infoClick(e) {
+	var infoStrings = require("infoStrings");
 	infoClicked = true;
 	
     var item = e.section.getItemAt(e.itemIndex);
@@ -227,8 +253,8 @@ function infoClick(e) {
 	var infoWeb = Ti.UI.createWebView({willHandleTouches: false, html: "Info has not been set for "+item.title.text+"<hr>JIRA TICKET:<br>Loading..."});
 	infoView.add(infoWeb);
 	
-	if (info[item.title.text])
-    	infoWeb.html=info[item.title.text].replace(/\n/g, "<br>")+"<hr>JIRA TICKET:<br>Loading...";
+	if (infoStrings.info[item.title.text])
+    	infoWeb.html=infoStrings.info[item.title.text].replace(/\n/g, "<br>")+"<hr>JIRA TICKET:<br>Loading...";
 	    	
     var xhr = Ti.Network.createHTTPClient({timeout: 4000});
     xhr.onload = function() {
@@ -281,15 +307,15 @@ function imageClick(e) {
 	// Options button
 	options.addEventListener("click", function() {
 		var dialog = Ti.UI.createOptionDialog({
-			cancel: 3,
-			options: ['Check Differences with DB', 'Upload Image for Comparisons', 'Clear Image from DB', 'Cancel'],
-			selectedIndex: 0,
+			cancel: 4,
+			options: ['Check Differences from run', 'Upload Image for Comparisons', 'Clear Image from DB', 'Change test result', 'Cancel'],
+			selectedIndex: 4,
 			destructive: 2,
 			title: 'Options'
 		});
 		
-		dialog.addEventListener("click", function(e) {
-			var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, item.title.text+"-"+scroll.getCurrentPage()+
+		dialog.addEventListener("click", function(e1) {
+			var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+item.title.text+"--"+scroll.getCurrentPage()+
 				Ti.Platform.model+
 				Ti.Platform.version+
 				Ti.Platform.displayCaps.density+
@@ -298,9 +324,13 @@ function imageClick(e) {
 				Ti.Platform.displayCaps.platformHeight+
 				".png"
 			);
-			switch (e.index) {
+			switch (e1.index) {
 				case 0:
-					var checkWindow = Ti.UI.createWindow({backgroundImage:file.resolve(), backgroundColor:'white'});
+					var checkWindow = Ti.UI.createWindow({backgroundColor:'white'});
+					if (file.exists())
+						checkWindow.backgroundImage = file.resolve();
+					else
+						checkWindow.add(Ti.UI.createLabel({text:"There was no image on the DB for this action, during the last run"}));
 					
 					checkWindow.addEventListener("click", function() {
 						checkWindow.close();
@@ -310,56 +340,124 @@ function imageClick(e) {
 					break;
 				case 1:
 					Cloud.Photos.query({
-					    page: 1,
-					    per_page: 20,
+					    limit: 1,
 					    where: { 'title': file.name }
 					}, function (e) {
 					    if (e.success) {
-					    	if (e.photos.length > 0) {
+					    	if (e.photos.length == 1) {
 						        Cloud.Photos.update({
 								    photo_id: e.photos[0].id,
-								    photo: Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, item.title.text+"-"+scroll.getCurrentPage()+".png")
+								    photo: Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+item.title.text+"--"+scroll.getCurrentPage()+".png")
 								}, function (e2) {
 								    if (e2.success)
-								        alert("Image uploaded.");
-								    else
-								 		alert("Unable to upload image.");
+								        alert("Image uploaded");
+								    else {
+								 		alert("Unable to upload image");
+								 		Ti.API.error("Update: "+e2.message);
+								 	}
 								});
 							} else {
 								Cloud.Photos.create({
-								    photo: Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, item.title.text+"-"+scroll.getCurrentPage()+".png"),
+								    photo: Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+item.title.text+"--"+scroll.getCurrentPage()+".png"),
 								    title: file.name
 								}, function (e2) {
 									if (e2.success) 
 										alert("Image uploaded");
-									else
+									else {
 										alert("Unable to upload image");
+										Ti.API.error("Create: "+e2.message);
+									}
 								});
 							}
-					    } else
+					    } else {
 					        alert("Unable to upload image!");
+					        Ti.API.error(e.message);
+					    }
 					});
 					break;
 				case 2:
-					Cloud.Photos.query({
-					    page: 1,
-					    per_page: 20,
-					    where: { 'title': file.name }
-					}, function (e) {
-					    if (e.success) {
-					    	for (x in e.photos) {
-						        Cloud.Photos.remove({
-								    photo_id: e.photos[x].id,
-								}, function (e2) {
-								    if (e2.success)
-								        alert("Image removed.");
-								    else
-								 		alert("Unable to remove image.");
-								});
-							}
-					    } else
-					        alert("Unable to remove image!");
-					});		
+					var subdialog = Ti.UI.createOptionDialog({
+						cancel: 1,
+						options: ['Yes', 'No'],
+						selectedIndex: 1,
+						destructive: 0,
+						title: 'Are you sure you want to remove the results image for this action from the DB?'
+					});	
+					
+					subdialog.addEventListener("click", function(e2) {
+						if (e2.index == 0){
+							Cloud.Photos.query({
+							    limit: 1,
+							    where: { 'title': file.name }
+							}, function (e) {
+							    if (e.success) {
+							    	for (x in e.photos) {
+								        Cloud.Photos.remove({
+										    photo_id: e.photos[x].id,
+										}, function (e2) {
+										    if (e2.success)
+										        alert("Image removed");
+										    else {
+										 		alert("Unable to remove image");
+										 		Ti.API.error(e2.message);
+										 	}
+										});
+									}
+							    } else {
+							        alert("Unable to remove image!");
+							        Ti.API.error(e.message);
+							    }
+							});	
+						}
+					});
+					subdialog.show();	
+					break;
+				case 3:
+					var subdialog = Ti.UI.createOptionDialog({
+						cancel: 4,
+						options: ['Pass', 'Check', 'Fail', 'Clear', 'Cancel'],
+						selectedIndex: 0,
+						destructive: 3,
+						title: 'Change result status to:'
+					});	
+					
+					subdialog.addEventListener("click", function(e2) {
+						switch (e2.index) {
+							case 0:
+								item.subtitle.text = " Passed; "+getTime();
+								item.subtitle.backgroundColor = "green";
+								status.text = item.subtitle.text;
+								status.backgroundColor = item.subtitle.backgroundColor;
+								break;
+							case 1:
+								item.subtitle.text = " Check; "+getTime();
+								item.subtitle.backgroundColor = "yellow";
+								status.text = item.subtitle.text;
+								status.backgroundColor = item.subtitle.backgroundColor;
+								break;
+							case 2:
+								item.subtitle.text = " Failed; "+getTime();
+								item.subtitle.backgroundColor = "red";
+								status.text = item.subtitle.text;
+								status.backgroundColor = item.subtitle.backgroundColor;
+								break;
+							case 3:
+								item.subtitle.text = " Not Run ";
+								item.subtitle.backgroundColor = "transparent";
+								status.text = item.subtitle.text;
+								status.backgroundColor = item.subtitle.backgroundColor;
+								break;
+						}
+						e.section.updateItemAt(e.itemIndex, item);
+						
+					    for (x in rows){
+					    	if (rows[x].sec == e.sectionIndex && rows[x].ind == e.itemIndex)
+					    		rows.splice(x, 1);
+					   	}
+					    rows.push({sec:e.sectionIndex, ind:e.itemIndex, item:item});
+					    Ti.App.Properties.setObject("data", {run:run, curTest:curTest, rows:JSON.stringify(rows), log:Alloy.Globals.log, launches:Alloy.Globals.launches});
+					});
+					subdialog.show();
 					break;
 			}
 		});
@@ -379,8 +477,9 @@ function imageClick(e) {
 	win.open();
 }
 
+// Save the comparison image
 Ti.App.addEventListener('CompareComplete', function(e) {
-	var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, e.name+
+	var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+e.name+
 		Ti.Platform.model+
 		Ti.Platform.version+
 		Ti.Platform.displayCaps.density+
@@ -401,10 +500,10 @@ function playClick(e) {
     run = [item.title.text];
     curTest = run[0];
     
-    var temps = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory).getDirectoryListing();
+    var temps = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages").getDirectoryListing();
     for (x in temps) {
     	if (temps[x].indexOf(curTest) > -1) {
-    		Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, temps[x]).deleteFile();
+    		Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+temps[x]).deleteFile();
     	}
     }
     delete images[curTest];
@@ -424,11 +523,11 @@ function sectionClick(sec) {
 		run.push($.view.sections[ind].items[x].title.text);
     curTest = run[0];
     
-    var temps = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory).getDirectoryListing();
+    var temps = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages").getDirectoryListing();
     for (y in run) {
     	for (x in temps) {
     		if (temps[x].indexOf(run[y]) > -1)
-    			Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, temps[x]).deleteFile();
+    			Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+temps[x]).deleteFile();
     	}
     	delete images[run[y]];
     }
@@ -448,9 +547,9 @@ function runClick() {
 	}
     curTest = run[0];
     
-    var temps = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory).getDirectoryListing();
+    var temps = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages").getDirectoryListing();
     for (x in temps) {
-    	Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, temps[x]).deleteFile();
+    	Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+temps[x]).deleteFile();
     }
     images = [];
     Alloy.Globals.log = [];
@@ -460,11 +559,57 @@ function runClick() {
     try { winx.open();} catch (error) {Ti.API.debug("Window already open from controller "+curTest);};
 }
 
+function optionsClick() {
+	var dialog = Ti.UI.createOptionDialog({
+		cancel: 2,
+		options: ['Toggle auto-run', "Clear all test info", 'Cancel'],
+		selectedIndex: 3,
+		destructive: 1,
+		title: 'Options'
+	});	
+	
+	dialog.addEventListener("click", function(e) {
+		switch (e.index) {
+			case 0:
+				autoRun();
+				break;
+			case 1:
+				var subdialog = Ti.UI.createOptionDialog({
+					cancel: 1,
+					options: ['Yes', 'No'],
+					selectedIndex: 1,
+					destructive: 0,
+					title: 'Are you sure you want to remove all results data?'
+				});	
+				
+				subdialog.addEventListener("click", function(e2) {
+					if (e2.index == 0){
+						run = [];
+						curTest = null;
+						rows = [];
+						images = [];
+						Alloy.Globals.log = [];
+						Alloy.Globals.launches = 0;
+						var d = Titanium.Filesystem.getFile(Titanium.Filesystem.tempDirectory, 'testRunImages');
+						d.deleteDirectory(true);
+						d.createDirectory();
+						Ti.App.Properties.setObject("data", {run:run, curTest:curTest, rows:JSON.stringify(rows), log:Alloy.Globals.log, launches:Alloy.Globals.launches});
+						while ($.view.sections.length > 0)
+							$.view.deleteSectionAt(0, {animated:false});
+						loadList();
+					}
+				});
+				subdialog.show();
+				break;
+		}
+	});
+	dialog.show();
+}
+
 // Click on the autorun button and toggle the automatic execution of tests
 function autoRun() {
-	if ($.autoRun.title == "Auto Run: True") {
+	if ($.nextRun.text != "" && $.nextRun.text != null) {
 		clearInterval(autoTimer);
-		$.autoRun.title = "Auto Run: False";
 		$.nextRun.text = "";
 	} else {
 		autoTimer = setInterval(function() {
@@ -472,7 +617,6 @@ function autoRun() {
 			runClick();
 		}, 3600000);
 		$.nextRun.text = "Next: "+getTime(1);
-		$.autoRun.title = "Auto Run: True";
 	}
 };
 
@@ -489,7 +633,7 @@ $.indexWindow.addEventListener('runNext', function(e) {
 		if (index < 0 || index >= run.length) {
 			curTest = null;
 			Alloy.Globals.alert = false;
-			Ti.App.Properties.setObject("data", {run:run, curTest:curTest, images:images, log:Alloy.Globals.log, launches:Alloy.Globals.launches});
+			Ti.App.Properties.setObject("data", {run:run, curTest:curTest, rows:JSON.stringify(rows), log:Alloy.Globals.log, launches:Alloy.Globals.launches});
 			return;
 		}
 	
@@ -505,20 +649,20 @@ $.indexWindow.addEventListener('runNext', function(e) {
 $.indexWindow.addEventListener('updateItem', function(e) {
 	var ind;
 	var item;
-	var section;
+	var sec;
 	for (x in $.view.sections) {
 		for (y in $.view.sections[x].items) {
 			if ($.view.sections[x].items[y].title.text == curTest) {
 				ind = y;
 				item = $.view.sections[x].items[y];
-				section = $.view.sections[x];
+				sec = x;
 				break;
 			}
 		}
 	}
 
 	if (curTest != null && typeof images[curTest] != 'undefined')
-		item.image.image = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, curTest+"-0.png");
+		item.image.image = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+curTest+"--0.png");
 	else
 		item.image.image = "/appicon.png";
 			
@@ -550,7 +694,12 @@ $.indexWindow.addEventListener('updateItem', function(e) {
 		}
 	}
        	
-    section.updateItemAt(ind, item);
+    $.view.sections[sec].updateItemAt(ind, item);
+    for (x in rows)
+    	if (rows[x].sec == sec && rows[x].ind == ind)
+    		rows.splice(x, 1);
+    rows.push({sec:sec, ind:ind, item:item});
+    Ti.App.Properties.setObject("data", {run:run, curTest:curTest, rows:JSON.stringify(rows), log:Alloy.Globals.log, launches:Alloy.Globals.launches});
 });
 
 // Take a screenshot of a specified view/window or from the system level
@@ -560,12 +709,12 @@ $.indexWindow.addEventListener('screenshot', function(e) {
 		if (typeof images[curTest] == 'undefined')
 			images[curTest] = [];
 			
-		var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, curTest+"-"+images[curTest].length+".png");
+		var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+curTest+"--"+images[curTest].length+".png");
 		file.write(Alloy.Globals.alert);
 		images[curTest][images[curTest].length] = file;
 		Alloy.Globals.alert = null;
 		
-		if (e.compare) {
+		if (e.compare !== false) {
 			compare(file);
 		} else {
 			Alloy.Globals.wait = false;
@@ -578,16 +727,16 @@ $.indexWindow.addEventListener('screenshot', function(e) {
 		return;
 		
 	if (e.image != null) {
-		var blob = e.image;
+		var blob = Ti.Platform.osname == "android" ? e.image.media : e.image;
 
 		if (typeof images[curTest] == 'undefined')
 			images[curTest] = [];
 			
-		var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, curTest+"-"+images[curTest].length+".png");
+		var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+curTest+"--"+images[curTest].length+".png");
 		file.write(blob);
 		images[curTest][images[curTest].length] = file;
 		
-		if (e.compare) {
+		if (e.compare !== false) {
 			compare(file);
 		} else {
 			Alloy.Globals.wait = false;
@@ -600,11 +749,11 @@ $.indexWindow.addEventListener('screenshot', function(e) {
 				if (typeof images[curTest] == 'undefined')
 					images[curTest] = [];
 					
-				var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, curTest+"-"+images[curTest].length+".png");
+				var file = Ti.Filesystem.getFile(Ti.Filesystem.tempDirectory, "testRunImages/"+curTest+"--"+images[curTest].length+".png");
 				file.write(blob);
 				images[curTest][images[curTest].length] = file;
 				
-				if (e.compare) {
+				if (e.compare !== false) {
 					compare(file);
 				} else {
 					Alloy.Globals.wait = false;
@@ -614,11 +763,13 @@ $.indexWindow.addEventListener('screenshot', function(e) {
 	}
 });
 
+// Compare an image with the saved image on the DB for the same test action
+// pic: image to compare
 function compare(pic){
 	var webview = Ti.UI.createWebView({url: "/comparisons/index.html", visible:false});
 	var webwindow = Ti.UI.createWindow();
 	
-	var f1 = pic.resolve();
+	var f1 = pic.resolve().replace("file://","");
 	var fstr = pic.name.replace(".png", "")+
 		Ti.Platform.model+
 		Ti.Platform.version+
@@ -634,11 +785,10 @@ function compare(pic){
 	});
 	
 	Cloud.Photos.query({
-	    page: 1,
-	    per_page: 1,
+	    limit: 1,
 	    where: { 'title': fstr }
 	}, function (e) {
-	    if (e.success && e.photos.length > 0) {
+	    if (e.success && e.photos.length == 1) {
 	    	f2 = e.photos[0].urls['original'];
 	    	webwindow.add(webview);
 			webwindow.open();

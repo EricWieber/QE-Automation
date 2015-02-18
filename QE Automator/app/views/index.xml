@@ -1,6 +1,6 @@
 <Alloy>
 	<Window id="indexWindow">
-		<Button id="autoRun" title="Auto Run: False" onClick="autoRun"></Button>
+		<Button id="options" title="Options" onClick="optionsClick"></Button>
 		<Label id="nextRun"></Label>
 		<Button id="all" title="Run Valid Tests" onClick="runClick" ></Button>
 		<ListView id="view" onItemclick="rowClick" >

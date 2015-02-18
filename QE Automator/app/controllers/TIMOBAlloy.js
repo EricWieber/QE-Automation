@@ -2,18 +2,12 @@ function clickButton(){
 	alert("I was clicked");	
 }
 
-function pass(){
-	//Do anything here
-	return true;
-}
-
 /*************************** Automation ***************************/
 var _window = $.window;
 var _actions = [
-	{screenshot:true},
 	{call:clickButton},
 	{event:"click", object:$.button, time:2},
-	{call:pass}
+	{screenshot:true}
 ];
 
 /***** Set the above. Do not modify the below *****/

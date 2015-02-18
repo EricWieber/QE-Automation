@@ -208,7 +208,7 @@ function automate(actions, window, args) {
 				if (typeof action.screenshot != "undefined" && action.screenshot) {			//Screenshot added to action (screenshot after execution)
 					count = index == actions.length-1 ? 4 : 3;
 					setTimeout(function() {
-						try {Alloy.Globals.window.fireEvent("screenshot", {object:action.screenshot, compare:action.compare || true, image:action.screenshot===true?null:action.screenshot==="alert"?"alert":action.screenshot.toImage(null, true)});} catch (error) {retest = true; Ti.API.error(error);}
+						try {Alloy.Globals.window.fireEvent("screenshot", {object:action.screenshot, compare:action.compare, image:action.screenshot===true?null:action.screenshot==="alert"?"alert":action.screenshot.toImage(null, true)});} catch (error) {retest = true; Ti.API.error(error);}
 						action.screenshot = false;
 					}, index==0?1000:0);
 				} else {
