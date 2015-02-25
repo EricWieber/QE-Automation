@@ -40,7 +40,7 @@ var Cloud = require('ti.cloud');
 // Log in user for image upload/comparisons
 Cloud.Users.login({
     login: 'qeautomator@appcelerator.com',
-    password: '<Password Here>'
+    password: 'automator'
 }, function (e) {
     if (e.success)
         Ti.API.info("Connected to DB");
@@ -92,7 +92,9 @@ $.indexWindow.addEventListener("open", function() {
 	for (x in rows) {
 		var item = rows[x].item;
 		item.image.image = typeof images[item.title.text] != 'undefined' ? images[item.title.text][0] : '/appicon.png';
-		$.view.sections[rows[x].sec].updateItemAt(rows[x].ind, item);
+		for (y in $.view.sections[rows[x].sec].items)
+			if ($.view.sections[rows[x].sec].items[y].title.text == item.title.text)
+				$.view.sections[rows[x].sec].updateItemAt(y, item);
 	}
 	
 	if (curTest !== null)
