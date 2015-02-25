@@ -40,7 +40,7 @@ var Cloud = require('ti.cloud');
 // Log in user for image upload/comparisons
 Cloud.Users.login({
     login: 'qeautomator@appcelerator.com',
-    password: 'automator'
+    password: '<PASSWORD HERE>'
 }, function (e) {
     if (e.success)
         Ti.API.info("Connected to DB");
